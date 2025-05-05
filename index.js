@@ -1,37 +1,34 @@
 const express = require("express");
-const axios = require("axios");
-const cheerio = require("cheerio");
+const fetch = require("node-fetch");
+const twilio = require("twilio");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.get("/", async (req, res) => {
+// Twilio Credentials
+const accountSid = 'YOUR_TWILIO_ACCOUNT_SID';
+const authToken = 'YOUR_TWILIO_AUTH_TOKEN';
+const client = new twilio(accountSid, authToken);
+
+// Your WhatsApp number format
+const fromWhatsApp = 'whatsapp:+14155238886';
+const toWhatsApp = 'whatsapp:+6282210547261'; // Your number
+
+async function checkCryptoAndAlert() {
   try {
-    const response = await axios.get("https://pluang.com/explore/crypto/1");
-    const html = response.data;
-    const $ = cheerio.load(html);
-    const result = [];
+    const rekuRes = await fetch("https://api.reku.id/v2/bidask");
+    const indodaxRes = await fetch("https://indodax.com/api/tickers");
+    const rekuData = await rekuRes.json();
+    const indodaxData = await indodaxRes.json();
 
-    $('[data-testid="asset-list-container"] [data-testid="asset-list-item"]').each((_, el) => {
-      const name = $(el).find('[data-testid="asset-name"]').text().trim();
-      const symbol = $(el).find('[data-testid="asset-symbol"]').text().trim();
-      const price = $(el).find('[data-testid="asset-price"]').text().trim();
+    let alerts = [];
 
-      if (name && symbol && price) {
-        result.push({ name, symbol, price });
-      }
-    });
+    rekuData.forEach((coin) => {
+      const symbol = coin.code.toLowerCase() + "_idr";
+      const indodaxPrice = parseFloat(indodaxData.tickers[symbol]?.last || 0);
+      const rekuBid = parseFloat(coin.bid || 0);
 
-    res.send(`
-      <h1>Real-Time Pluang Crypto Prices</h1>
-      <table border="1" cellpadding="8" cellspacing="0">
-        <tr><th>Name</th><th>Symbol</th><th>Price (IDR)</th></tr>
-        ${result.map(coin => `<tr><td>${coin.name}</td><td>${coin.symbol}</td><td>${coin.price}</td></tr>`).join("")}
-      </table>
-    `);
-  } catch (error) {
-    res.status(500).send("Error fetching data");
-  }
-});
-
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+      if (rekuBid > 0 && indodaxPrice > 0) {
+        const gain = ((indodaxPrice - rekuBid) / rekuBid) * 100;
+        if (gain > 3) {
+          alerts.push(`
