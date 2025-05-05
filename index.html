@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pluang Crypto Prices – Real-Time Tracker</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 30px; }
+    table { margin: 0 auto; border-collapse: collapse; width: 90%; }
+    th, td { border: 1px solid #ccc; padding: 10px; font-size: 16px; }
+    th { background-color: #f2f2f2; }
+  </style>
+</head>
+<body>
+  <h1>Real-Time Pluang Crypto Prices</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>Crypto Name</th>
+        <th>Symbol</th>
+        <th>Price (IDR)</th>
+      </tr>
+    </thead>
+    <tbody id="pluang-data">
+      <tr><td colspan="3">Loading...</td></tr>
+    </tbody>
+  </table>
+
+<script>
+async function fetchPluangData() {
+  try {
+    const response = await fetch('https://pluang.com/api/v3/market/crypto/prices');
+    const data = await response.json();
+    let html = '';
+
+    data.data.forEach(coin => {
+      html += `
+        <tr>
+          <td>${coin.name}</td>
+          <td>${coin.code}</td>
+          <td>Rp ${parseFloat(coin.latestPrice).toLocaleString('id-ID')}</td>
+        </tr>
+      `;
+    });
+
+    document.getElementById('pluang-data').innerHTML = html;
+  } catch (error) {
+    console.error('Failed to fetch Pluang data:', error);
+    document.getElementById('pluang-data').innerHTML = '<tr><td colspan="3">Error loading data</td></tr>';
+  }
+}
+
+fetchPluangData();
+setInterval(fetchPluangData, 60000); // Refresh every 1 minute
+</script>
+</body>
+</html>
